@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>樂齡健康陪伴系統</title>
+  <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+  
+  <style>
+    /* ==========================================
+       樂齡色彩學：杏色溫暖主題與變數
+       ========================================== */
+    :root {
+      --bg-color: #FDF3E7;         /* 溫暖杏色底 (App 內部) */
+      --body-bg: #E8D8C8;          /* 電腦大螢幕時的外部底色 */
+      --surface-color: #FFFFFF;    /* 底部輸入區純白背景 */
+      --header-bg: #00695C;        /* 深青色標題列 */
+      --text-main: #3E2723;        /* 深咖啡色文字 */
+      --text-light: #FFFFFF;       /* 純白文字 */
+      --primary-color: #00695C;    /* 深青色按鈕 */
+      --primary-hover: #004D40;    
+      --user-msg-bg: #D35400;      /* 磚紅色 (長輩發言) */
+      --bot-msg-bg: #FFFFFF;       /* 系統回覆純白底色 */
+      --border-color: #E8D8C8;     
+      --mic-color: #FF9800;        /* 麥克風按鈕預設顏色 */
+      --mic-recording: #E53935;    /* 麥克風錄音中顏色 */
+    }
+
+    /* ==========================================
+       全域與響應式容器設計 (RWD 核心)
+       ========================================== */
+    body {
+      background-color: var(--body-bg); /* 在大螢幕時顯示較深的底色 */
+      font-family: 'Microsoft JhengHei', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center; /* 讓 App 容器在電腦上水平置中 */
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* 模擬 App 視窗的容器 */
+    #app-wrapper {
+      width: 100%;
+      max-width: 100%; /* 限制最大寬度，大螢幕閱讀才舒服 */
+      height: 100%;
+      background-color: var(--bg-color);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* ==========================================
+       內部 UI 元件
+       ========================================== */
+    .header {
+      background-color: var(--header-bg);
+      padding: 20px;
+      text-align: center;
+      font-size: 26px;
+      font-weight: bold;
+      color: var(--text-light);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      z-index: 10;
+      letter-spacing: 2px;
+    }
+
+    #chat-container {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .message {
+      max-width: 85%;
+      padding: 18px 22px;
+      border-radius: 18px;
+      font-size: 22px; 
+      line-height: 1.6;
+      word-wrap: break-word;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+    }
+
+    .user-message {
+      background-color: var(--user-msg-bg);
+      color: var(--text-light);
+      align-self: flex-end;
+      border-bottom-right-radius: 5px;
+    }
+
+    .bot-message {
+      background-color: var(--bot-msg-bg);
+      color: var(--text-main);
+      align-self: flex-start;
+      border: 1px solid var(--border-color);
+      border-bottom-left-radius: 5px;
+      white-space: pre-wrap; 
+    }
+
+    .status-text {
+      font-size: 18px;
+      color: #795548;
+      align-self: center;
+      margin-top: -5px;
+      margin-bottom: 10px;
+      font-weight: bold;
+      display: none; 
+    }
+
+    /* 底部輸入區 */
+    .input-area {
+      background-color: var(--surface-color);
+      padding: 15px 20px;
+      display: flex;
+      gap: 12px;
+      box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+      border-top: 1px solid var(--border-color);
+      align-items: center;
+    }
+
+    #mic-btn {
+      background-color: var(--mic-color);
+      color: white;
+      border: none;
+      border-radius: 50%; 
+      width: 60px;
+      height: 60px;
+      font-size: 28px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.7); }
+      70% { box-shadow: 0 0 0 15px rgba(229, 57, 53, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(229, 57, 53, 0); }
+    }
+
+    .recording {
+      background-color: var(--mic-recording) !important;
+      animation: pulse 1.5s infinite;
+    }
+
+    #user-input {
+      flex: 1;
+      background-color: #FAFAFA;
+      color: var(--text-main);
+      border: 2px solid #CCC;
+      border-radius: 12px;
+      padding: 15px;
+      font-size: 22px; 
+      min-width: 0; /* 避免 flex 子元素擠破容器 */
+    }
+
+    #user-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      background-color: #FFFFFF;
+    }
+
+    #user-input::placeholder {
+      color: #9E9E9E;
+    }
+
+    #send-btn {
+      background-color: var(--primary-color);
+      color: var(--text-light);
+      border: none;
+      border-radius: 12px;
+      padding: 15px 25px;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    #send-btn:active {
+      background-color: var(--primary-hover);
+    }
+
+    #send-btn:disabled {
+      background-color: #BDBDBD;
+      cursor: not-allowed;
+    }
+
+    /* ==========================================
+       手機版螢幕最佳化 (小於 600px 時觸發)
+       ========================================== */
+    @media (max-width: 600px) {
+      .header {
+        font-size: 22px;
+        padding: 15px;
+      }
+      
+      #chat-container {
+        padding: 15px;
+        gap: 15px;
+      }
+      
+      .message {
+        max-width: 90%; /* 手機上讓文字氣泡寬一點 */
+        font-size: 19px; 
+        padding: 15px 18px;
+      }
+      
+      .input-area {
+        padding: 10px 12px;
+        gap: 8px; /* 縮小按鈕之間的間距 */
+      }
+      
+      #mic-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
+      }
+      
+      #user-input {
+        font-size: 18px;
+        padding: 12px;
+      }
+      
+      #send-btn {
+        font-size: 18px;
+        padding: 12px 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-wrapper">
+    <div class="header">樂齡健康陪伴小幫手</div>
+
+    <div id="chat-container">
+      <div class="message bot-message">阿公/阿嬤您好！我是您的健康小幫手。今天身體感覺好嗎？您可以打字，或直接按「麥克風」跟我說話喔！</div>
+    </div>
+    
+    <div id="loading-status" class="status-text">小幫手思考中...</div>
+
+    <div class="input-area">
+      <button id="mic-btn" onclick="toggleSpeechRecognition()" title="語音輸入">🎤</button>
+      <input type="text" id="user-input" placeholder="按麥克風說話..." onkeypress="handleKeyPress(event)">
+      <button onclick="sendMessage()" id="send-btn">傳送</button>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 語音辨識 (Web Speech API) 模組
+    // ==========================================
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition;
+    let isRecording = false;
+    const micBtn = document.getElementById('mic-btn');
+    const inputElement = document.getElementById('user-input');
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.continuous = false; 
+      recognition.interimResults = true; 
+      recognition.lang = 'cmn-Hant-TW'; 
+
+      recognition.onstart = function() {
+        isRecording = true;
+        micBtn.classList.add('recording');
+        inputElement.placeholder = "聆聽中...請說話";
+      };
+
+      recognition.onresult = function(event) {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          transcript += event.results[i][0].transcript;
+        }
+        inputElement.value = transcript;
+      };
+
+      recognition.onerror = function(event) {
+        console.error("語音辨識錯誤:", event.error);
+        stopRecording();
+        inputElement.placeholder = "聽不清楚，請再試一次";
+      };
+
+      recognition.onend = function() {
+        stopRecording();
+      };
+    } else {
+      micBtn.style.display = 'none';
+      inputElement.placeholder = "請輸入想問的問題...";
+    }
+
+    function toggleSpeechRecognition() {
+      if (!SpeechRecognition) {
+        alert("您的瀏覽器不支援語音輸入，請使用 Google Chrome。");
+        return;
+      }
+      
+      if (isRecording) {
+        recognition.stop();
+      } else {
+        inputElement.value = ""; 
+        recognition.start();
+      }
+    }
+
+    function stopRecording() {
+      isRecording = false;
+      micBtn.classList.remove('recording');
+      inputElement.placeholder = "按麥克風說話...";
+    }
+
+    // ==========================================
+    // 文字傳送與 AI API 串接模組
+    // ==========================================
+    function handleKeyPress(event) {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    }
+
+    function sendMessage() {
+      const message = inputElement.value.trim();
+      const sendBtn = document.getElementById('send-btn');
+      const loadingStatus = document.getElementById('loading-status');
+      
+      if (message === '') return;
+
+      if (isRecording) {
+        recognition.stop();
+      }
+
+      addMessageToChat(message, 'user-message');
+      inputElement.value = ''; 
+      
+      sendBtn.innerText = '處理中';
+      sendBtn.disabled = true;
+      loadingStatus.style.display = 'block';
+      scrollToBottom();
+
+      fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: message })
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('伺服器回應錯誤');
+        }
+        return response.json();
+      })
+      .then(data => {
+        addMessageToChat(data.reply, 'bot-message');
+      })
+      .catch((error) => {
+        console.error('連線錯誤:', error);
+        addMessageToChat('抱歉，剛剛連線稍微卡住了，請您再說一次好嗎？', 'bot-message');
+      })
+      .finally(() => {
+        sendBtn.innerText = '傳送';
+        sendBtn.disabled = false;
+        loadingStatus.style.display = 'none';
+        scrollToBottom();
+      });
+    }
+
+    function addMessageToChat(text, className) {
+      const chatContainer = document.getElementById('chat-container');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'message ' + className;
+      msgDiv.innerText = text;
+      chatContainer.appendChild(msgDiv);
+    }
+
+    function scrollToBottom() {
+      const chatContainer = document.getElementById('chat-container');
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+  </script>
+</body>
+</html>
